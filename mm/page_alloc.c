@@ -4602,17 +4602,12 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	unsigned int cpuset_mems_cookie;
 	unsigned int zonelist_iter_cookie;
 	int reserve_flags;
-<<<<<<< HEAD
 	unsigned long pages_reclaimed = 0;
 	int retry_loop_count = 0;
 	unsigned long jiffies_s = jiffies;
 	u64 utime, stime_s, stime_e, stime_d;
-=======
-	pg_data_t *pgdat = ac->preferred_zoneref->zone->zone_pgdat;
-	bool woke_kswapd = false;
->>>>>>> e3d47985157b (mm: Stop kswapd early when nothing's waiting for it to free pages)
-
 	task_cputime(current, &utime, &stime_s);
+	pg_data_t *pgdat = ac->preferred_zoneref->zone->zone_pgdat;
 	bool woke_kswapd = false;
 
 	/*

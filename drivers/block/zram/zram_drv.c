@@ -54,7 +54,7 @@ static DEFINE_IDR(zram_index_idr);
 static DEFINE_MUTEX(zram_index_mutex);
 
 static int zram_major;
-static const char *default_compressor = "lzo-rle";
+static const char *default_compressor = "zstd";
 
 /* Module params (documentation at end) */
 static unsigned int num_devices = 1;
@@ -3161,6 +3161,7 @@ static void zram_reset_device(struct zram *zram)
 
 	comp = zram->comp;
 	disksize = zram->disksize;
+	//zram->disksize = 8 * 1024 * 1024 * 1024;
 	zram->disksize = 0;
 
 	set_capacity(zram->disk, 0);

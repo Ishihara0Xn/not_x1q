@@ -44,6 +44,7 @@ extern void sec_debug_summary_set_klog_info(struct sec_debug_summary_data_apss *
 extern void sec_debug_summary_set_rtb_info(struct sec_debug_summary_data_apss *apss);
 
 /* implemented @ drivers/soc/qcom/memory_dump_v2.c */
+#ifdef CONFIG_QCOM_MEMORY_DUMP_V2
 extern void sec_debug_summary_set_msm_memdump_info(struct sec_debug_summary_data_apss *apss);
-
+#endif /* CONFIG_QCOM_MEMORY_DUMP_V2 */
 #endif /* __SEC_DEBUG_SUMMARY_EXTERN_H__ */

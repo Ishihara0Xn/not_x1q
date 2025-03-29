@@ -349,10 +349,12 @@ struct sec_debug_summary_data_apss {
 	struct sec_debug_summary_sched_log sched_log;
 	struct sec_debug_summary_logger_log_info logger_log;
 	struct sec_debug_summary_avc_log avc_log;
+#ifdef CONFIG_QCOM_MEMORY_DUMP_V2
 	union {
 		struct msm_dump_data ** tz_core_dump;
 		uint64_t _tz_core_dump;
 	};
+#endif
 	struct sec_debug_summary_ksyms ksyms;
 	struct sec_debug_summary_kconst kconst;
 	struct sec_debug_summary_iolog iolog;

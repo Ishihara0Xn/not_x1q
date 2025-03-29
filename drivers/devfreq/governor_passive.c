@@ -68,7 +68,7 @@ static int devfreq_passive_get_target_freq(struct devfreq *devfreq,
 	dev_pm_opp_put(opp);
 
 	/*
-	 * Get the OPP table's index of decided freqeuncy by governor
+	 * Get the OPP table's index of decided frequency by governor
 	 * of parent device.
 	 */
 	for (i = 0; i < parent_devfreq->profile->max_state; i++)

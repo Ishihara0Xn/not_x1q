@@ -4,7 +4,7 @@ TC_PATH="/home/skye/bomb/clang/bin/"
 GCC_PATH="/usr/bin/"
 LLD_PATH="/usr/bin/"
 CLANGV="21"
-KERNEL_NAME="not-interstellar+"
+KERNEL_NAME="not-rbmk-"
 MAKE="./makeparallel"
 BUILD_ENV="CC=${TC_PATH}clang-${CLANGV} CROSS_COMPILE=${TC_PATH}aarch64-linux-gnu- LLVM=1 LLVM_IAS=1 PATH=$LLVM_PATH:$LLD_PATH:$PATH"  
 KERNEL_MAKE_ENV="DTC_EXT=$(pwd)/tools/dtc CONFIG_BUILD_ARM64_DT_OVERLAY=y"
@@ -16,6 +16,8 @@ rm -rf .version
 rm -rf .local
 make O=/home/skye/bomb/out clean
 make O=/home/skye/bomb/out $BUILD_ENV vendor/kona-not_defconfig vendor/samsung/r8q.config vendor/debugfs.config
+echo "*****************************************"
+echo "*****************************************"
 
 make -j12 O=/home/skye/bomb/out $BUILD_ENV dtbs
 DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"

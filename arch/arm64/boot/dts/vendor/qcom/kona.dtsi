@@ -352,7 +352,7 @@
 	};
 
 	chosen {
-		bootargs = "rcupdate.rcu_expedited=1 quiet noirqdebug rcu_nocbs=0-7 cgroup.memory=nokmem nosoftlockup mce=ignore_ce";
+		bootargs = "rcupdate.rcu_expedited=1 quiet noirqdebug rcu_nocbs=0-7 nosoftlockup";
 	};
 
 	firmware: firmware {
@@ -1131,6 +1131,7 @@
 
 	cpu4_cpu_ddr_qoslat: qcom,cpu4-cpu-ddr-qoslat {
 		compatible = "qcom,devfreq-qoslat";
+		qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 		governor = "powersave";
 		operating-points-v2 = <&qoslat_opp_table>;
 		mboxes = <&qmp_aop 0>;
@@ -1141,6 +1142,7 @@
 		qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 
 		cpu0_cpu_l3_latmon: qcom,cpu0-cpu-l3-latmon {
+		        qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 			compatible = "qcom,arm-memlat-mon";
 			qcom,target-dev = <&cpu0_l3>;
 			qcom,cachemiss-ev = <0x17>;
@@ -1160,6 +1162,7 @@
 		};
 
 		cpu0_cpu_llcc_latmon: qcom,cpu0-cpu-llcc-latmon {
+			qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 			compatible = "qcom,arm-memlat-mon";
 			qcom,target-dev = <&cpu0_cpu_llcc_lat>;
 			qcom,cachemiss-ev = <0x2A>;
@@ -1201,7 +1204,6 @@
 	cpu4_memlat_cpugrp: qcom,cpu4-cpugrp {
 		compatible = "qcom,arm-memlat-cpugrp";
 		qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
-
 		cpu4_cpu_l3_latmon: qcom,cpu4-cpu-l3-latmon {
 			compatible = "qcom,arm-memlat-mon";
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6>;
@@ -1233,6 +1235,7 @@
 		};
 
 		cpu4_cpu_llcc_latmon: qcom,cpu4-cpu-llcc-latmon {
+			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			compatible = "qcom,arm-memlat-mon";
 			qcom,target-dev = <&cpu4_cpu_llcc_lat>;
 			qcom,cachemiss-ev = <0x2A>;
@@ -1282,6 +1285,7 @@
 
 		cpu4_computemon: qcom,cpu4-computemon {
 			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,target-dev = <&cpu4_cpu_ddr_latfloor>;
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
@@ -1302,6 +1306,7 @@
 
 		cpu4_qoslatmon: qcom,cpu4-qoslatmon {
 			compatible = "qcom,arm-memlat-mon";
+			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,target-dev = <&cpu4_cpu_ddr_qoslat>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
@@ -5056,4 +5061,37 @@
 		   <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>,
 		   <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
 	interrupt-names = "dcvsh0_int", "dcvsh1_int", "dcvsh2_int";
+
+	qcom,cpufreq-table-0 =
+			< 691200>,
+			< 787200>,
+			< 979200>,
+			<1171200>,
+			<1344000>,
+			<1516800>,
+			<1708800>,
+			<1804800>;
+			
+	qcom,cpufreq-table-1 =
+			< 710400>,
+			< 940800>,
+			<1171200>,
+			<1382400>,
+			<1670400>,
+			<1862400>,
+			<2150400>,
+			<2342400>,
+			<2419200>;
+			
+	qcom,cpufreq-table-2 =
+			< 844800>,
+			<1075200>,
+			<1305600>,
+			<1632000>,
+			<1862400>,
+			<2073600>,
+			<2265600>,
+			<2457600>,
+			<2745600>,
+			<2841600>;
 };

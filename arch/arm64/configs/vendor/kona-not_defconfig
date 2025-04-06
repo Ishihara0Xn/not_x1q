@@ -3,7 +3,7 @@
 #
 
 # Localversion
-CONFIG_LOCALVERSION="-not-interstellar+"
+CONFIG_LOCALVERSION="-not-rmbk"
 
 # Kprobes & Uprobes
 CONFIG_KPROBES=n

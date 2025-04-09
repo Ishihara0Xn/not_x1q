@@ -95,6 +95,14 @@ config ANDROID_SIMPLE_LMK_MINFREE
 	  Simple LMK will try to free at least this much memory per reclaim.
 endif
 
+config ANDROID_VENDOR_HOOKS
+	bool "Android Vendor Hooks"
+	---help---
+	  Enable vendor hooks
+	  
+	  Allow vendor modules to attach to tracepoint "hooks" defined via
+	  DECLARE_HOOK or DECLARE_RESTRICTED_HOOK.
+
 endif # if ANDROID
 
 endmenu

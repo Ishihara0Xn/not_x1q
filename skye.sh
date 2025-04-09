@@ -20,9 +20,6 @@ make O=/home/skye/bomb/out $BUILD_ENV vendor/kona-not_defconfig vendor/samsung/r
 echo "*****************************************"
 echo "*****************************************"
 
-echo "*****************************************"
-echo "*****************************************"
-
 make -j12 O=/home/skye/bomb/out $BUILD_ENV dtbs
 DTB_OUT="/home/skye/bomb/out/arch/arm64/boot/dts/vendor/qcom"
 cat $DTB_OUT/*.dtb > /home/skye/bomb/AnyKernel3/dtb

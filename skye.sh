@@ -14,7 +14,7 @@ rm -rf /home/skye/bomb/AnyKernel3/dtb
 rm -rf /home/skye/bomb/dtbo.img
 rm -rf .version
 rm -rf .local
-make O=/home/skye/bomb/out clean
+#make O=/home/skye/bomb/out clean
 make O=/home/skye/bomb/out $BUILD_ENV vendor/kona-not_defconfig vendor/samsung/r8q.config vendor/debugfs.config
 
 echo "*****************************************"

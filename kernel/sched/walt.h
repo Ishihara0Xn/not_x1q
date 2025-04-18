@@ -66,11 +66,7 @@ extern void update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 extern unsigned int walt_big_tasks(int cpu);
 
 struct waltgov_callback {
-
-
 	void (*func)(struct waltgov_callback *cb, u64 time, unsigned int flags);
-
-
 };
 
 static inline void

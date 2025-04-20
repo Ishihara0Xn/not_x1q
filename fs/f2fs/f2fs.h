@@ -248,7 +248,8 @@ enum {
 	ORPHAN_INO,		/* for orphan ino list */
 	APPEND_INO,		/* for append ino list */
 	UPDATE_INO,		/* for update ino list */
-	TRANS_DIR_INO,		/* for trasactions dir ino list */
+	TRANS_DIR_INO,		/* for transactions dir ino list */
+	XATTR_DIR_INO,		/* for xattr updated dir ino list */
 	FLUSH_INO,		/* for multiple device flushing */
 	MAX_INO_ENTRY,		/* max. list */
 };
@@ -470,6 +471,11 @@ static inline bool __has_cursum_space(struct f2fs_journal *journal,
 
 #define F2FS_IOC_FSGETXATTR		FS_IOC_FSGETXATTR
 #define F2FS_IOC_FSSETXATTR		FS_IOC_FSSETXATTR
+
+#ifdef CONFIG_DDAR
+#define	F2FS_IOC_GET_DD_POLICY		FS_IOC_GET_DD_POLICY
+#define	F2FS_IOC_SET_DD_POLICY		FS_IOC_SET_DD_POLICY
+#endif
 
 struct f2fs_gc_range {
 	u32 sync;
@@ -1138,6 +1144,7 @@ enum cp_reason_type {
 	CP_FASTBOOT_MODE,
 	CP_SPEC_LOG_NUM,
 	CP_RECOVER_DIR,
+	CP_XATTR_DIR,
 };
 
 enum iostat_type {

@@ -32,6 +32,10 @@
 #include <trace/events/f2fs.h>
 #include <trace/events/android_fs.h>
 
+#ifdef CONFIG_FSCRYPT_SDP
+#include <linux/fscrypto_sdp_ioctl.h>
+#endif
+
 static vm_fault_t f2fs_filemap_fault(struct vm_fault *vmf)
 {
 	struct inode *inode = file_inode(vmf->vma->vm_file);
@@ -214,6 +218,9 @@ static inline enum cp_reason_type need_do_checkpoint(struct inode *inode)
 		f2fs_exist_written_data(sbi, F2FS_I(inode)->i_pino,
 							TRANS_DIR_INO))
 		cp_reason = CP_RECOVER_DIR;
+	else if (f2fs_exist_written_data(sbi, F2FS_I(inode)->i_pino,
+							XATTR_DIR_INO))
+		cp_reason = CP_XATTR_DIR;
 
 	return cp_reason;
 }
@@ -981,8 +988,10 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
 
 	if (attr->ia_valid & ATTR_MODE) {
 		err = posix_acl_chmod(inode, f2fs_get_inode_mode(inode));
-		if (err || is_inode_flag_set(inode, FI_ACL_MODE)) {
-			inode->i_mode = F2FS_I(inode)->i_acl_mode;
+
+		if (is_inode_flag_set(inode, FI_ACL_MODE)) {
+			if (!err)
+				inode->i_mode = F2FS_I(inode)->i_acl_mode;
 			clear_inode_flag(inode, FI_ACL_MODE);
 		}
 	}
@@ -2043,6 +2052,9 @@ static int f2fs_ioc_start_atomic_write(struct file *filp)
 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	int ret;
 
+	if (!(filp->f_mode & FMODE_WRITE))
+		return -EBADF;
+
 	if (!inode_owner_or_capable(inode))
 		return -EACCES;
 
@@ -2110,6 +2122,9 @@ static int f2fs_ioc_commit_atomic_write(struct file *filp)
 	struct inode *inode = file_inode(filp);
 	int ret;
 
+	if (!(filp->f_mode & FMODE_WRITE))
+		return -EBADF;
+
 	if (!inode_owner_or_capable(inode))
 		return -EACCES;
 
@@ -2152,6 +2167,9 @@ static int f2fs_ioc_start_volatile_write(struct file *filp)
 	struct inode *inode = file_inode(filp);
 	int ret;
 
+	if (!(filp->f_mode & FMODE_WRITE))
+		return -EBADF;
+
 	if (!inode_owner_or_capable(inode))
 		return -EACCES;
 
@@ -2187,6 +2205,9 @@ static int f2fs_ioc_release_volatile_write(struct file *filp)
 	struct inode *inode = file_inode(filp);
 	int ret;
 
+	if (!(filp->f_mode & FMODE_WRITE))
+		return -EBADF;
+
 	if (!inode_owner_or_capable(inode))
 		return -EACCES;
 
@@ -2215,6 +2236,9 @@ static int f2fs_ioc_abort_volatile_write(struct file *filp)
 {
 	struct inode *inode = file_inode(filp);
 	int ret;
+
+	if (!(filp->f_mode & FMODE_WRITE))
+		return -EBADF;
 
 	if (!inode_owner_or_capable(inode))
 		return -EACCES;
@@ -3874,6 +3898,22 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return f2fs_release_compress_blocks(filp, arg);
 	case F2FS_IOC_RESERVE_COMPRESS_BLOCKS:
 		return f2fs_reserve_compress_blocks(filp, arg);
+#ifdef CONFIG_FSCRYPT_SDP
+	case FS_IOC_GET_SDP_INFO:
+	case FS_IOC_SET_SDP_POLICY:
+	case FS_IOC_SET_SENSITIVE:
+	case FS_IOC_SET_PROTECTED:
+	case FS_IOC_ADD_CHAMBER:
+	case FS_IOC_REMOVE_CHAMBER:
+	case FS_IOC_DUMP_FILE_KEY:
+		return fscrypt_sdp_ioctl(filp, cmd, arg);
+#endif
+#ifdef CONFIG_DDAR
+	case F2FS_IOC_GET_DD_POLICY:
+	case F2FS_IOC_SET_DD_POLICY:
+	case FS_IOC_GET_DD_INODE_COUNT:
+		return fscrypt_dd_ioctl(cmd, &arg, file_inode(filp));
+#endif
 	default:
 		return -ENOTTY;
 	}
@@ -4042,6 +4082,20 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case F2FS_IOC_GET_COMPRESS_BLOCKS:
 	case F2FS_IOC_RELEASE_COMPRESS_BLOCKS:
 	case F2FS_IOC_RESERVE_COMPRESS_BLOCKS:
+#ifdef CONFIG_FSCRYPT_SDP
+	case FS_IOC_GET_SDP_INFO:
+	case FS_IOC_SET_SDP_POLICY:
+	case FS_IOC_SET_SENSITIVE:
+	case FS_IOC_SET_PROTECTED:
+	case FS_IOC_ADD_CHAMBER:
+	case FS_IOC_REMOVE_CHAMBER:
+	case FS_IOC_DUMP_FILE_KEY:
+#endif
+#ifdef CONFIG_DDAR
+	case F2FS_IOC_GET_DD_POLICY:
+	case F2FS_IOC_SET_DD_POLICY:
+	case FS_IOC_GET_DD_INODE_COUNT:
+#endif
 		break;
 	default:
 		return -ENOIOCTLCMD;

@@ -42,87 +42,30 @@ flash_dtbo() {
   fi
 }
 # begin kernel/dtb/dtbo changes
-android=$(file_getprop /system/build.prop ro.system.build.version.release);
 oneui=$(file_getprop /system/build.prop ro.build.version.oneui);
 gsi=$(file_getprop /system/build.prop ro.product.system.device);
-if [ $oneui == 60101 ]; then
+if [ -n "$oneui" ]; then
    ui_print " "
-   ui_print " • OneUI 6.1.1 ROM detected! • "
-   ui_print " "
-   ui_print " • Patching Fingerprint Sensor... • "
-   patch_cmdline "android.is_aosp" "android.is_aosp=0";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
-   flash_dtbo
-elif [ $oneui == 60100 ]; then
-   ui_print " "
-   ui_print " • OneUI 6.1 ROM detected! • "
+   ui_print " • OneUI ROM detected! • " # OneUI 6.1.1/6.1/6.0/5.1/5.0/4.1/4.0/3.1 bomb
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=0";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
-   elif [ $oneui == 50100 ]; then
-   ui_print " "
-   ui_print " • OneUI 5.1 ROM detected! • "
-   ui_print " "
-   ui_print " • Patching Fingerprint Sensor... • "
-   patch_cmdline "android.is_aosp" "android.is_aosp=0";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
-elif [ -n "$oneui" ]; then
-   ui_print " "
-   ui_print " • Legacy OneUI ROM detected! • " # ie. OneUI 5.0/4.1/4.0/3.1
-   ui_print " "
-   ui_print " • Patching Fingerprint Sensor... • "
-   patch_cmdline "android.is_aosp" "android.is_aosp=0";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
 elif [ $gsi == generic ]; then
    ui_print " "
-   ui_print " • GSI ROM detected! • "
+   ui_print " • GSI ROM detected! • " # i hope the gsi doesnt boot :)
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=0";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
-elif [ $android == 14 ]; then
-   ui_print " "
-   ui_print " • AOSP A14 ROM detected! • "
-   ui_print " "
-   ui_print " • Patching CMDline... • "
-   patch_cmdline "androidboot.verifiedbootstate=orange" "androidboot.verifiedbootstate=green"
-   ui_print " "
-   ui_print " • Patching Fingerprint Sensor... • "
-   patch_cmdline "android.is_aosp" "android.is_aosp=1";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
-elif [ $android == 15 ]; then
-   ui_print " "
-   ui_print " • AOSP A15 ROM detected! • "
-   ui_print " "
-   ui_print " • Patching CMDline... • "
-   patch_cmdline "androidboot.verifiedbootstate=orange" "androidboot.verifiedbootstate=green"
-   ui_print " "
-   ui_print " • Patching Fingerprint Sensor... • "
-   patch_cmdline "android.is_aosp" "android.is_aosp=1";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
-   patch_cmdline "android.is_aosp" "android.is_aosp=1";
 else
    ui_print " "
-   ui_print " • AOSP A13 ROM detected! • "
+   ui_print " • AOSP ROM detected! • " # Android 15/14/13 veri gud
    ui_print " "
    ui_print " • Patching CMDline... • "
    patch_cmdline "androidboot.verifiedbootstate=orange" "androidboot.verifiedbootstate=green"
    ui_print " "
    ui_print " • Patching Fingerprint Sensor... • "
    patch_cmdline "android.is_aosp" "android.is_aosp=1";
-   ui_print " "
-   ui_print " • Flashing Custom Device Tree Blob Overlay • "
 fi
-
-# end kernel/dtb/dtbo changes
 
 write_boot;
 ## end boot install

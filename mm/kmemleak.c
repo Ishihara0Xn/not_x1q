@@ -567,6 +567,7 @@ static struct kmemleak_object *create_object(unsigned long ptr, size_t size,
 		object = kmem_cache_alloc(object_cache, gfp_kmemleak_mask(gfp));
 		if (object)
 			break;
+	}
 
 	INIT_LIST_HEAD(&object->object_list);
 	INIT_LIST_HEAD(&object->gray_list);

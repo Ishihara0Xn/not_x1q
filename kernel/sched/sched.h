@@ -98,7 +98,6 @@ struct sched_walt_cpu_load {
 	u64 ws;
 };
 
-unsigned long apply_dvfs_headroom(unsigned long util, int cpu, bool tapered);
 #ifdef CONFIG_SCHED_WALT
 extern unsigned int sched_ravg_window;
 
@@ -678,8 +677,6 @@ struct rt_rq {
 	unsigned long		rt_nr_total;
 	int			overloaded;
 	struct plist_head	pushable_tasks;
-	
-	struct sched_avg avg;
 
 #endif /* CONFIG_SMP */
 	int			rt_queued;

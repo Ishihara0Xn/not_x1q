@@ -40,13 +40,12 @@
 #include <linux/init_task.h>
 #include <linux/uaccess.h>
 #include <linux/build_bug.h>
+#if defined(CONFIG_KSU_SUSFS_SUS_PATH) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
+#include <linux/susfs_def.h>
+#endif
 
 #ifdef CONFIG_FSCRYPT_SDP
 #include <linux/fscrypto_sdp_name.h>
-#endif
-
-#if defined(CONFIG_KSU_SUSFS_SUS_PATH) || defined(CONFIG_KSU_SUSFS_OPEN_REDIRECT)
-#include <linux/susfs_def.h>
 #endif
 
 #include "internal.h"
@@ -1652,9 +1651,6 @@ static struct dentry *__lookup_hash(const struct qstr *name,
 	struct dentry *dentry = lookup_dcache(name, base, flags);
 	struct dentry *old;
 	struct inode *dir = base->d_inode;
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	int error;
-#endif
 
 	if (dentry)
 		return dentry;
@@ -1674,13 +1670,6 @@ static struct dentry *__lookup_hash(const struct qstr *name,
 	}
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 	if (!IS_ERR(dentry) && dentry->d_inode && unlikely(dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
-		if ((flags & (LOOKUP_CREATE | LOOKUP_EXCL))) {
-			error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
-			if (error) {
-				dput(dentry);
-				return ERR_PTR(error);
-			}
-		}
 		dput(dentry);
 		return ERR_PTR(-ENOENT);
 	}
@@ -3027,8 +3016,8 @@ static inline int may_create(struct vfsmount *mnt, struct inode *dir, struct den
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 	int error;
 #endif
- 	struct user_namespace *s_user_ns;
- 	audit_inode_child(dir, child, AUDIT_TYPE_CHILD_CREATE);
+	struct user_namespace *s_user_ns;
+	audit_inode_child(dir, child, AUDIT_TYPE_CHILD_CREATE);
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 	if (child->d_inode && unlikely(child->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 		error = inode_permission(dir, MAY_WRITE | MAY_EXEC);
@@ -4174,7 +4163,7 @@ int vfs_rmdir2(struct vfsmount *mnt, struct inode *dir, struct dentry *dentry)
 	error = security_inode_rmdir(dir, dentry);
 	if (error)
 		goto out;
-		
+
 #ifdef CONFIG_FSCRYPT_SDP
 	error = fscrypt_sdp_check_rmdir(dentry);
 	if (error == -EIO)
@@ -4811,7 +4800,6 @@ int vfs_rename2(struct vfsmount *mnt,
 		if (error)
 			goto out;
 	}
-	
 #ifdef CONFIG_FSCRYPT_SDP
 	error = fscrypt_sdp_check_rename_pre(old_dentry);
 	if (error == -EIO)
@@ -4825,6 +4813,7 @@ int vfs_rename2(struct vfsmount *mnt,
 	fscrypt_sdp_check_rename_post(old_dir, old_dentry,
 						new_dir, new_dentry);
 #endif
+
 	if (!(flags & RENAME_EXCHANGE) && target) {
 		if (is_dir) {
 			shrink_dcache_parent(new_dentry);

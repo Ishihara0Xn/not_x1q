@@ -50,7 +50,6 @@
 #include <linux/printk.h>
 #include <linux/dax.h>
 #include <linux/psi.h>
-#include <linux/simple_lmk.h>
 
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -62,10 +61,6 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/vmscan.h>
-
-#include <linux/sched/cputime.h>
-#include <linux/debugfs.h>
-#include <linux/jiffies.h>
 
 struct scan_control {
 	/* How many pages shrink_list() should reclaim */
@@ -143,13 +138,6 @@ struct scan_control {
 	struct vm_area_struct *target_vma;
 };
 
-/*
- * Number of active kswapd threads
- */
-#define DEF_KSWAPD_THREADS_PER_NODE 1
-int kswapd_threads = DEF_KSWAPD_THREADS_PER_NODE;
-int kswapd_threads_current = DEF_KSWAPD_THREADS_PER_NODE;
-
 #ifdef ARCH_HAS_PREFETCH
 #define prefetch_prev_lru_page(_page, _base, _field)			\
 	do {								\
@@ -181,7 +169,7 @@ int kswapd_threads_current = DEF_KSWAPD_THREADS_PER_NODE;
 /*
  * From 0 .. 100.  Higher means more swappy.
  */
-int vm_swappiness = 200;
+int vm_swappiness = 60;
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.
@@ -481,8 +469,6 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 					  : SHRINK_BATCH;
 	long scanned = 0, next_deferred;
 	long min_cache_size = batch_size;
-	unsigned long shrinker_time;
-	u64 utime, stime_s, stime_e;
 
 	if (current_is_kswapd())
 		min_cache_size = 0;
@@ -493,10 +479,6 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 	freeable = shrinker->count_objects(shrinker, shrinkctl);
 	if (freeable == 0 || freeable == SHRINK_EMPTY)
 		return freeable;
-
-	atomic_long_inc(&shrinker->nr_total_scan);
-	shrinker_time = jiffies;
-	task_cputime(current, &utime, &stime_s);
 
 	/*
 	 * copy the current shrinker scan count into a local variable
@@ -604,14 +586,6 @@ static unsigned long do_shrink_slab(struct shrink_control *shrinkctl,
 		new_nr = atomic_long_read(&shrinker->nr_deferred[nid]);
 
 	trace_mm_shrink_slab_end(shrinker, nid, freed, nr, new_nr, total_scan);
-
-	atomic64_add((jiffies - shrinker_time), &shrinker->jiffies_time);
-	task_cputime(current, &utime, &stime_e);
-
-	if (stime_e - stime_s > 0) {
-		atomic64_add((stime_e - stime_s), &shrinker->cpu_time);
-		atomic_long_inc(&shrinker->nr_delay_scan);
-	}
 
 	return freed;
 }
@@ -2562,48 +2536,6 @@ inline bool need_memory_boosting(struct pglist_data *pgdat)
 	return ret;
 }
 
-static struct dentry *vmscan_debug_root;
-
-static int shrinker_debug_show(struct seq_file *s, void *unused)
-{
-	int retry = 10;
-	struct shrinker *shrinker;
-
-readlock_retry:
-	if (!down_read_trylock(&shrinker_rwsem)) {
-		if (retry-- > 0) {
-			msleep(10);
-			goto readlock_retry;
-		}
-
-		return 0;
-	}
-
-	list_for_each_entry(shrinker, &shrinker_list, list)
-		seq_printf(s, "%pF nr_total:%lu nr_delay:%lu jiffies:%u ms cpu:%lu ms\n",
-			shrinker->scan_objects,
-			shrinker->nr_total_scan.counter, 
-			shrinker->nr_delay_scan.counter,
-			jiffies_to_msecs(shrinker->jiffies_time.counter),
-			shrinker->cpu_time.counter / NSEC_PER_MSEC);
-		
-	up_read(&shrinker_rwsem);
-
-	return 0;
-}
-
-static int shrinker_debug_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, shrinker_debug_show, inode->i_private);
-}
-
-static const struct file_operations debug_shrinker_fops = {
-	.open = shrinker_debug_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
 /*
  * Determine how aggressively the anon and file LRU lists should be
  * scanned.  The relative value of each set of LRU lists is determined
@@ -4001,8 +3933,7 @@ restart:
 		bool raise_priority = true;
 		bool balanced;
 		bool ret;
-		
-simple_lmk_decide_reclaim(sc.priority);
+
 		sc.reclaim_idx = classzone_idx;
 
 		/*
@@ -4103,7 +4034,8 @@ simple_lmk_decide_reclaim(sc.priority);
 		__fs_reclaim_release();
 		ret = try_to_freeze();
 		__fs_reclaim_acquire();
-		if (ret || kthread_should_stop())
+		if (ret || kthread_should_stop() ||
+		    !atomic_long_read(&kswapd_waiters))
 			break;
 
 		/*
@@ -4197,7 +4129,6 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int alloc_order, int reclaim_o
 	 * succeed.
 	 */
 	if (prepare_kswapd_sleep(pgdat, reclaim_order, classzone_idx)) {
-	        simple_lmk_stop_reclaim();
 		/*
 		 * Compaction records what page blocks it recently failed to
 		 * isolate pages from and skips them in the future scanning.
@@ -4237,7 +4168,6 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int alloc_order, int reclaim_o
 	 */
 	if (!remaining &&
 	    prepare_kswapd_sleep(pgdat, reclaim_order, classzone_idx)) {
-	    simple_lmk_stop_reclaim();
 		trace_mm_vmscan_kswapd_sleep(pgdat->node_id);
 
 		/*
@@ -4465,8 +4395,7 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
    restore their cpu bindings. */
 static int kswapd_cpu_online(unsigned int cpu)
 {
-	int nid, hid;
-	int nr_threads = kswapd_threads_current;
+	int nid;
 
 	for_each_node_state(nid, N_MEMORY) {
 		pg_data_t *pgdat = NODE_DATA(nid);
@@ -4477,74 +4406,13 @@ static int kswapd_cpu_online(unsigned int cpu)
 #else
 		mask = cpumask_of_node(pgdat->node_id);
 #endif
-		if (cpumask_any_and(cpu_online_mask, mask) < nr_cpu_ids) {
-			for (hid = 0; hid < nr_threads; hid++) {
-				/* One of our CPUs online: restore mask */
-				set_cpus_allowed_ptr(pgdat->kswapd[hid], mask);
-			}
-		}
+
+		if (cpumask_any_and(cpu_online_mask, mask) < nr_cpu_ids)
+			/* One of our CPUs online: restore mask */
+			set_cpus_allowed_ptr(pgdat->kswapd, mask);
 	}
 	return 0;
 }
-
-static void update_kswapd_threads_node(int nid)
-{
-	pg_data_t *pgdat;
-	int drop, increase;
-	int last_idx, start_idx, hid;
-	int nr_threads = kswapd_threads_current;
-
-	pgdat = NODE_DATA(nid);
-	last_idx = nr_threads - 1;
-	if (kswapd_threads < nr_threads) {
-		drop = nr_threads - kswapd_threads;
-		for (hid = last_idx; hid > (last_idx - drop); hid--) {
-			if (pgdat->kswapd[hid]) {
-				kthread_stop(pgdat->kswapd[hid]);
-				pgdat->kswapd[hid] = NULL;
-			}
-		}
-	} else {
-		increase = kswapd_threads - nr_threads;
-		start_idx = last_idx + 1;
-		for (hid = start_idx; hid < (start_idx + increase); hid++) {
-			pgdat->kswapd[hid] = kthread_run(kswapd, pgdat,
-						"kswapd%d:%d", nid, hid);
-			if (IS_ERR(pgdat->kswapd[hid])) {
-				pr_err("Failed to start kswapd%d on node %d\n",
-					hid, nid);
-				pgdat->kswapd[hid] = NULL;
-				/*
-				 * We are out of resources. Do not start any
-				 * more threads.
-				 */
-				break;
-			}
-		}
-	}
-}
-
-void update_kswapd_threads(void)
-{
-	int nid;
-
-	if (kswapd_threads_current == kswapd_threads)
-		return;
-
-	/*
-	 * Hold the memory hotplug lock to avoid racing with memory
-	 * hotplug initiated updates
-	 */
-	mem_hotplug_begin();
-	for_each_node_state(nid, N_MEMORY)
-		update_kswapd_threads_node(nid);
-
-	pr_info("kswapd_thread count changed, old:%d new:%d\n",
-		kswapd_threads_current, kswapd_threads);
-	kswapd_threads_current = kswapd_threads;
-	mem_hotplug_done();
-}
-
 
 /*
  * This kswapd start function will be called by init and node-hot-add.
@@ -4554,25 +4422,18 @@ int kswapd_run(int nid)
 {
 	pg_data_t *pgdat = NODE_DATA(nid);
 	int ret = 0;
-	int hid, nr_threads;
 
-	if (pgdat->kswapd[0])
+	if (pgdat->kswapd)
 		return 0;
 
-	nr_threads = kswapd_threads;
-	for (hid = 0; hid < nr_threads; hid++) {
-		pgdat->kswapd[hid] = kthread_run(kswapd, pgdat, "kswapd%d:%d",
-							nid, hid);
-		if (IS_ERR(pgdat->kswapd[hid])) {
-			/* failure at boot is fatal */
-			BUG_ON(system_state < SYSTEM_RUNNING);
-			pr_err("Failed to start kswapd%d on node %d\n",
-				hid, nid);
-			ret = PTR_ERR(pgdat->kswapd[hid]);
-			pgdat->kswapd[hid] = NULL;
-		}
+	pgdat->kswapd = kthread_run(kswapd, pgdat, "kswapd%d", nid);
+	if (IS_ERR(pgdat->kswapd)) {
+		/* failure at boot is fatal */
+		BUG_ON(system_state < SYSTEM_RUNNING);
+		pr_err("Failed to start kswapd on node %d\n", nid);
+		ret = PTR_ERR(pgdat->kswapd);
+		pgdat->kswapd = NULL;
 	}
-	kswapd_threads_current = nr_threads;
 	return ret;
 }
 
@@ -4582,16 +4443,11 @@ int kswapd_run(int nid)
  */
 void kswapd_stop(int nid)
 {
-	struct task_struct *kswapd;
-	int hid;
-	int nr_threads = kswapd_threads_current;
+	struct task_struct *kswapd = NODE_DATA(nid)->kswapd;
 
-	for (hid = 0; hid < nr_threads; hid++) {
-		kswapd = NODE_DATA(nid)->kswapd[hid];
-		if (kswapd) {
-			kthread_stop(kswapd);
-			NODE_DATA(nid)->kswapd[hid] = NULL;
-		}
+	if (kswapd) {
+		kthread_stop(kswapd);
+		NODE_DATA(nid)->kswapd = NULL;
 	}
 }
 
@@ -4657,14 +4513,6 @@ static int __init kswapd_init(void)
 	if (sysfs_create_group(mm_kobj, &vmscan_attr_group))
 		pr_err("vmscan: register sysfs failed\n");
 #endif
-
-	vmscan_debug_root = debugfs_create_dir("vmscan", NULL);
-	if (vmscan_debug_root) {
-		if (!debugfs_create_file("shrinker", 0444, vmscan_debug_root,
-				NULL, &debug_shrinker_fops))
-			pr_err("shrinker: failed to debugfs_create_file\n");
-	} else 
-		pr_err("vmscan: failed to debugfs_create_dir\n");
 
 	return 0;
 }

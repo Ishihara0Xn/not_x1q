@@ -162,7 +162,7 @@ static ssize_t debug_level_write(struct file *filp, const char __user *buf,
 
 	/* filter partial writes and invalid commands */
 	if (*ppos != 0 || count >= sizeof(kbuf) || count == 0) {
-		d_vpr_e("returning error - pos %d, count %d\n", *ppos, count);
+		d_vpr_e("returning error - pos %lld, count %lu\n", *ppos, count);
 		rc = -EINVAL;
 	}
 
@@ -271,7 +271,9 @@ struct dentry *msm_vidc_debugfs_init_core(struct msm_vidc_core *core,
 	dir = debugfs_create_dir(debugfs_name, parent);
 	if (IS_ERR_OR_NULL(dir)) {
 		dir = NULL;
+#ifdef CONFIG_DEBUG_FS
 		d_vpr_e("Failed to create debugfs for msm_vidc\n");
+#endif
 		goto failed_create_dir;
 	}
 	if (!debugfs_create_file("info", 0444, dir, core, &core_info_fops)) {
@@ -492,7 +494,9 @@ struct dentry *msm_vidc_debugfs_init_inst(struct msm_vidc_inst *inst,
 	dir = debugfs_create_dir(debugfs_name, parent);
 	if (IS_ERR_OR_NULL(dir)) {
 		dir = NULL;
+#ifdef CONFIG_DEBUG_FS
 		s_vpr_e(inst->sid, "Failed to create debugfs for msm_vidc\n");
+#endif
 		goto failed_create_dir;
 	}
 

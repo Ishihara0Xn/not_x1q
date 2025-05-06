@@ -781,7 +781,7 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 	struct sde_connector *c_conn;
 	struct sde_connector_state *c_state;
 	struct msm_display_kickoff_params params;
-	struct dsi_display *display;
+	struct dsi_display *display = NULL;
 	int rc;
 #if defined(CONFIG_DISPLAY_SAMSUNG)
 	struct samsung_display_driver_data *vdd;
@@ -831,7 +831,8 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 		vdd = display->panel->panel_private;
 		finger_mask_state = sde_connector_get_property(c_conn->base.state,
 				CONNECTOR_PROP_FINGERPRINT_MASK);
-                if (is_aosp) {
+
+		if (is_aosp) {
 	                if (finger_mask_state == 0 && vdd->finger_mask == 1) {
         	                finger_mask_state = vdd->finger_mask;
                 	        SDE_ERROR("[FINGER_MASK]updated finger mask mode %d\n", vdd->finger_mask);

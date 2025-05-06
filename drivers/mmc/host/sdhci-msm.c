@@ -4714,8 +4714,7 @@ void sdhci_msm_pm_qos_irq_init(struct sdhci_host *host)
 		(msm_host->pm_qos_irq.req.type != PM_QOS_REQ_ALL_CORES))
 		set_affine_irq(msm_host, host);
 	else
-		cpumask_copy(&msm_host->pm_qos_irq.req.cpus_affine,
-			cpumask_of(msm_host->pdata->pm_qos_data.irq_cpu));
+		msm_host->pm_qos_irq.req.cpus_affine = *cpumask_bits(cpumask_of(msm_host->pdata->pm_qos_data.irq_cpu));
 
 	sdhci_msm_pm_qos_wq_init(msm_host);
 
@@ -4770,7 +4769,7 @@ static ssize_t sdhci_msm_pm_qos_group_show(struct device *dev,
 		group = &msm_host->pm_qos[i];
 		offset += snprintf(&buf[offset], PAGE_SIZE,
 			"Group #%d (mask=0x%lx) PM QoS: enabled=%d, counter=%d, latency=%d\n",
-			i, group->req.cpus_affine.bits[0],
+			i, group->req.cpus_affine,
 			msm_host->pm_qos_group_enable,
 			atomic_read(&group->counter),
 			group->latency);
@@ -4929,15 +4928,14 @@ void sdhci_msm_pm_qos_cpu_init(struct sdhci_host *host,
 			sdhci_msm_pm_qos_cpu_unvote_work);
 		atomic_set(&group->counter, 0);
 		group->req.type = PM_QOS_REQ_AFFINE_CORES;
-		cpumask_copy(&group->req.cpus_affine,
-			&msm_host->pdata->pm_qos_data.cpu_group_map.mask[i]);
+		group->req.cpus_affine = *cpumask_bits(&msm_host->pdata->pm_qos_data.cpu_group_map.mask[i]);
 		/* We set default latency here for all pm_qos cpu groups. */
 		group->latency = PM_QOS_DEFAULT_VALUE;
 		pm_qos_add_request(&group->req, PM_QOS_CPU_DMA_LATENCY,
 			group->latency);
 		pr_info("%s (): voted for group #%d (mask=0x%lx) latency=%d\n",
 			__func__, i,
-			group->req.cpus_affine.bits[0],
+			group->req.cpus_affine,
 			group->latency);
 	}
 	msm_host->pm_qos_prev_cpu = -1;
@@ -5045,15 +5043,6 @@ static void sdhci_msm_card_event(struct sdhci_host *host)
 
 	if (!mmc_gpio_get_cd(msm_host->mmc))
 		msm_host->saved_tuning_phase = INVALID_TUNING_PHASE;
-#if defined(CONFIG_SEC_HYBRID_TRAY) && defined(CONFIG_HDM)
-	else {
-		const struct sdhci_msm_offset *msm_host_offset =
-			msm_host->offset;
-		/* Enable pwr irq interrupts */
-		sdhci_msm_writel_relaxed(INT_MASK, host,
-				msm_host_offset->CORE_PWRCTL_MASK);
-	}
-#endif
 }
 
 static int sdhci_msm_notify_load(struct sdhci_host *host, enum mmc_load state)

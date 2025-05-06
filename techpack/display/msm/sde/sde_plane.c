@@ -2466,7 +2466,7 @@ static void _sde_plane_get_max_downscale_limits(struct sde_plane *psde,
 {
 	bool rotated, has_predown;
 	const struct sde_sspp_sub_blks *sblk;
-	struct sde_hw_inline_pre_downscale_cfg *pd;
+	struct sde_hw_inline_pre_downscale_cfg *pd = NULL;
 
 	rotated = pstate->rotation & DRM_MODE_ROTATE_90;
 	sblk = psde->pipe_sblk;
@@ -2893,13 +2893,11 @@ struct sde_csc_cfg *sde_plane_get_csc_cfg(struct drm_plane *plane)
 	struct sde_plane_state *pstate;
 	struct sde_csc_cfg *csc_ptr;
 	struct sde_plane *psde;
-	struct drm_crtc *drm_crtc = plane->state->crtc;
-	struct sde_crtc_state *cstate = to_sde_crtc_state(drm_crtc->state);
 
 	psde = to_sde_plane(plane);
 	pstate = to_sde_plane_state(plane->state);
 
-	if (sde_plane_is_fod_layer(&pstate->base) || cstate->color_invert_on)
+	if (sde_plane_is_fod_layer(&pstate->base))
 		csc_ptr = NULL;
 	else if (psde->csc_pcc_ptr)
 		csc_ptr = psde->csc_pcc_ptr;
@@ -3385,12 +3383,8 @@ static inline void _sde_plane_set_csc_pcc(struct sde_plane *psde,
 					  struct drm_crtc *crtc)
 {
 	const struct drm_msm_pcc *pcc_cfg = sde_cp_crtc_get_pcc_cfg(crtc);
-	struct sde_crtc_state *cstate = to_sde_crtc_state(crtc->state);
 
 	if (pcc_cfg == psde->pcc_cfg)
-		return;
-
-	if (cstate->color_invert_on)
 		return;
 
 	psde->pcc_cfg = pcc_cfg;
@@ -3774,6 +3768,9 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
     msm_property_install_range(&psde->property_info, "fod",
 		0x0, 0, INT_MAX, 0, PLANE_PROP_FOD);
 
+    msm_property_install_range(&psde->property_info, "fod",
+		0x0, 0, INT_MAX, 0, PLANE_PROP_FOD);
+
 	msm_property_install_range(&psde->property_info, "alpha",
 		0x0, 0, 255, 255, PLANE_PROP_ALPHA);
 
@@ -3977,6 +3974,12 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 			PLANE_PROP_FB_TRANSLATION_MODE);
 }
 
+#define cmp_and_set(old, new) \
+	if ((old) != (new)) { \
+		(old) = (new); \
+		changed = true; \
+	}
+
 static inline void _sde_plane_set_csc_v1(struct sde_plane *psde,
 		void __user *usr_ptr)
 {
@@ -4161,6 +4164,7 @@ static void _sde_plane_set_excl_rect_v1(struct sde_plane *psde,
 		struct sde_plane_state *pstate, void __user *usr_ptr)
 {
 	struct drm_clip_rect excl_rect_v1;
+	bool changed = false;
 
 	if (!psde || !pstate) {
 		SDE_ERROR("invalid argument(s)\n");
@@ -4179,10 +4183,13 @@ static void _sde_plane_set_excl_rect_v1(struct sde_plane *psde,
 	}
 
 	/* populate from user space */
-	pstate->excl_rect.x = excl_rect_v1.x1;
-	pstate->excl_rect.y = excl_rect_v1.y1;
-	pstate->excl_rect.w = excl_rect_v1.x2 - excl_rect_v1.x1;
-	pstate->excl_rect.h = excl_rect_v1.y2 - excl_rect_v1.y1;
+	cmp_and_set(pstate->excl_rect.x, excl_rect_v1.x1);
+	cmp_and_set(pstate->excl_rect.y, excl_rect_v1.y1);
+	cmp_and_set(pstate->excl_rect.w, excl_rect_v1.x2 - excl_rect_v1.x1);
+	cmp_and_set(pstate->excl_rect.h, excl_rect_v1.y2 - excl_rect_v1.y1);
+
+	if (!changed)
+		return;
 
 	SDE_DEBUG_PLANE(psde, "excl_rect: {%d,%d,%d,%d}\n",
 			pstate->excl_rect.x, pstate->excl_rect.y,

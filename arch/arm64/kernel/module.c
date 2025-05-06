@@ -80,7 +80,6 @@ void module_memfree(void *module_region)
 #endif /* CONFIG_MODULES || CONFIG_BPF_JIT */
 
 #ifdef CONFIG_MODULES
-
 enum aarch64_reloc_op {
 	RELOC_OP_NONE,
 	RELOC_OP_ABS,

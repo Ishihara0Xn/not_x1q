@@ -4435,7 +4435,6 @@ static ssize_t ss_finger_hbm_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-		
 	if (is_aosp) {
 		// brightness value > 0 means enabled
 		if (vdd->finger_mask == 0) {

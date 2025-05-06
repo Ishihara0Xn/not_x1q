@@ -15,8 +15,6 @@
 #define SCHED_CPUFREQ_PL        (1U << 5)
 #define SCHED_CPUFREQ_EARLY_DET (1U << 6)
 #define SCHED_CPUFREQ_CONTINUE (1U << 8)
-#define SCHED_CPUFREQ_BOOST_UPDATE	(1U << 9)
-#define SCHED_CPUFREQ_SKIP_LIMITS (1U << 11)
 
 #ifdef CONFIG_CPU_FREQ
 struct cpufreq_policy;
@@ -34,7 +32,7 @@ bool cpufreq_this_cpu_can_update(struct cpufreq_policy *policy);
 static inline unsigned long map_util_freq(unsigned long util,
 					unsigned long freq, unsigned long cap)
 {
-	return freq * util / cap;
+	return (freq + (freq >> 2)) * util / cap;
 }
 #endif /* CONFIG_CPU_FREQ */
 

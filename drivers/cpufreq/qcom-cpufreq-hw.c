@@ -32,10 +32,6 @@
 			(acc_count ? ((c - cpumask_first(m) + 1) * 4) : 0)
 
 
-#ifdef CONFIG_SEC_PM
-extern void *thermal_ipc_log;
-#endif
-
 enum {
 	CPUFREQ_HW_LOW_TEMP_LEVEL,
 	CPUFREQ_HW_HIGH_TEMP_LEVEL,
@@ -51,7 +47,6 @@ enum {
 	REG_INTR_EN,
 	REG_INTR_CLR,
 	REG_INTR_STATUS,
-
 	REG_ARRAY_SIZE,
 };
 
@@ -85,10 +80,6 @@ struct cpufreq_qcom {
 	struct skipped_freq skip_data;
 	bool is_irq_enabled;
 	bool is_irq_requested;
-#ifdef CONFIG_SEC_PM
-	unsigned long lowest_freq;
-	bool limiting;
-#endif
 };
 
 struct cpufreq_counter {
@@ -300,7 +291,7 @@ static void qcom_cpufreq_ready(struct cpufreq_policy *policy)
 }
 
 static struct cpufreq_driver cpufreq_qcom_hw_driver = {
-	.flags		= CPUFREQ_STICKY | CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+	.flags		= CPUFREQ_NEED_INITIAL_FREQ_CHECK |
 			  CPUFREQ_HAVE_GOVERNOR_PER_POLICY,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target_index	= qcom_cpufreq_hw_target_index,

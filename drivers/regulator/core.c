@@ -305,17 +305,25 @@ static int regulator_check_voltage(struct regulator_dev *rdev,
 		rdev_err(rdev, "voltage operation not allowed\n");
 		return -EPERM;
 	}
-	
-	if (*max_uV > rdev->constraints->max_uV) {
+
+	/* check if requested voltage range actually overlaps the constraints */
+	if (*max_uV < rdev->constraints->min_uV ||
+	    *min_uV > rdev->constraints->max_uV) {
+		rdev_err(rdev, "requested voltage range [%d, %d] does not fit within constraints: [%d, %d]\n",
+			*min_uV, *max_uV, rdev->constraints->min_uV,
+			rdev->constraints->max_uV);
+		return -EINVAL;
+	}
+
+	if (*max_uV > rdev->constraints->max_uV)
 		*max_uV = rdev->constraints->max_uV;
-	}
-	
-	if (*min_uV < rdev->constraints->min_uV) {
+	if (*min_uV < rdev->constraints->min_uV)
 		*min_uV = rdev->constraints->min_uV;
-	}
-	
+
 	if (*min_uV > *max_uV) {
-		*min_uV = rdev->constraints->min_uV;
+		rdev_err(rdev, "unsupportable voltage range: %d-%duV\n",
+			 *min_uV, *max_uV);
+		return -EINVAL;
 	}
 
 	return 0;

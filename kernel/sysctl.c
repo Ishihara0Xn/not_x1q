@@ -68,6 +68,7 @@
 #include <linux/bpf.h>
 #include <linux/mount.h>
 #include <linux/pipe_fs_i.h>
+#include <linux/userfaultfd_k.h>
 
 #include "../lib/kstrtox.h"
 
@@ -255,6 +256,9 @@ static int proc_dostring_coredump(struct ctl_table *table, int write,
 #endif
 static int proc_dopipe_max_size(struct ctl_table *table, int write,
 		void __user *buffer, size_t *lenp, loff_t *ppos);
+static int proc_dointvec_minmax_bpf_stats(struct ctl_table *table, int write,
+					  void __user *buffer, size_t *lenp,
+					  loff_t *ppos);
 #ifdef CONFIG_SCHED_WALT
 static int proc_douintvec_minmax_schedhyst(struct ctl_table *table, int write,
 		void __user *buffer, size_t *lenp, loff_t *ppos);
@@ -1610,6 +1614,15 @@ static struct ctl_table kern_table[] = {
 		.extra2		= &two,
 	},
 #endif
+	{
+		.procname	= "bpf_stats_enabled",
+		.data		= &sysctl_bpf_stats_enabled,
+		.maxlen		= sizeof(sysctl_bpf_stats_enabled),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax_bpf_stats,
+		.extra1		= &zero,
+		.extra2		= &one,
+	},
 #if defined(CONFIG_TREE_RCU) || defined(CONFIG_PREEMPT_RCU)
 	{
 		.procname	= "panic_on_rcu_stall",
@@ -2147,6 +2160,17 @@ static struct ctl_table vm_table[] = {
 		.maxlen		= sizeof(sysctl_swap_ratio_enable),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
+	},
+#endif
+#ifdef CONFIG_USERFAULTFD
+	{
+		.procname	= "unprivileged_userfaultfd",
+		.data		= &sysctl_unprivileged_userfaultfd,
+		.maxlen		= sizeof(sysctl_unprivileged_userfaultfd),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &one,
 	},
 #endif
 	{ }
@@ -3850,6 +3874,28 @@ int proc_douintvec_ravg_window(struct ctl_table *table, int write,
 }
 
 #endif /* CONFIG_PROC_SYSCTL */
+
+static int proc_dointvec_minmax_bpf_stats(struct ctl_table *table, int write,
+					  void __user *buffer, size_t *lenp,
+					  loff_t *ppos)
+{
+	int ret, bpf_stats = *(int *)table->data;
+	struct ctl_table tmp = *table;
+
+	if (write && !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	tmp.data = &bpf_stats;
+	ret = proc_dointvec_minmax(&tmp, write, buffer, lenp, ppos);
+	if (write && !ret) {
+		*(int *)table->data = bpf_stats;
+		if (bpf_stats)
+			static_branch_enable(&bpf_stats_enabled_key);
+		else
+			static_branch_disable(&bpf_stats_enabled_key);
+	}
+	return ret;
+}
 
 /*
  * No sense putting this after each symbol definition, twice,

@@ -237,7 +237,7 @@ nfp_bpf_verifier_prep(struct nfp_app *app, struct nfp_net *nn,
 		goto err_free;
 
 	nfp_prog->verifier_meta = nfp_prog_first_meta(nfp_prog);
-	bpf->verifier.ops = &nfp_bpf_analyzer_ops;
+	bpf->verifier.ops = &nfp_bpf_dev_ops;
 
 	return 0;
 
@@ -498,7 +498,8 @@ int nfp_bpf_event_output(struct nfp_app_bpf *bpf, const void *data,
 	map_id_full = be64_to_cpu(cbe->map_ptr);
 	map_id = map_id_full;
 
-	if (len < sizeof(struct cmsg_bpf_event) + pkt_size + data_size)
+	if (size_add(pkt_size, data_size) > INT_MAX ||
+	    len < sizeof(struct cmsg_bpf_event) + pkt_size + data_size)
 		return -EINVAL;
 	if (cbe->hdr.ver != CMSG_MAP_ABI_VERSION)
 		return -EINVAL;

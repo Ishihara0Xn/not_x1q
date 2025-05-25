@@ -68,6 +68,7 @@ struct bpf_test {
 	int fixup_prog2[MAX_FIXUPS];
 	int fixup_map_in_map[MAX_FIXUPS];
 	int fixup_cgroup_storage[MAX_FIXUPS];
+	int fixup_percpu_cgroup_storage[MAX_FIXUPS];
 	const char *errstr;
 	const char *errstr_unpriv;
 	uint32_t retval, retval_unpriv;
@@ -2457,6 +2458,10 @@ static struct bpf_test tests[] = {
 				    offsetof(struct __sk_buff, tc_index)),
 			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_0,
 				    offsetof(struct __sk_buff, cb[3])),
+			BPF_LDX_MEM(BPF_DW, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, tstamp)),
+			BPF_STX_MEM(BPF_DW, BPF_REG_1, BPF_REG_0,
+				    offsetof(struct __sk_buff, tstamp)),
 			BPF_EXIT_INSN(),
 		},
 		.errstr_unpriv = "",
@@ -3373,7 +3378,7 @@ static struct bpf_test tests[] = {
 			BPF_ST_MEM(BPF_DW, BPF_REG_1, offsetof(struct __sk_buff, mark), 0),
 			BPF_EXIT_INSN(),
 		},
-		.errstr = "BPF_ST stores into R1 context is not allowed",
+		.errstr = "BPF_ST stores into R1 ctx is not allowed",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_SCHED_CLS,
 	},
@@ -3385,7 +3390,7 @@ static struct bpf_test tests[] = {
 				     BPF_REG_0, offsetof(struct __sk_buff, mark), 0),
 			BPF_EXIT_INSN(),
 		},
-		.errstr = "BPF_XADD stores into R1 context is not allowed",
+		.errstr = "BPF_XADD stores into R1 ctx is not allowed",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_SCHED_CLS,
 	},
@@ -3736,7 +3741,7 @@ static struct bpf_test tests[] = {
 			BPF_MOV64_IMM(BPF_REG_0, 0),
 			BPF_EXIT_INSN(),
 		},
-		.errstr = "R3 pointer arithmetic on PTR_TO_PACKET_END",
+		.errstr = "R3 pointer arithmetic on pkt_end",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_SCHED_CLS,
 	},
@@ -4734,6 +4739,177 @@ static struct bpf_test tests[] = {
 		.flags = F_NEEDS_EFFICIENT_UNALIGNED_ACCESS,
 	},
 	{
+		"direct packet read test#1 for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_2, BPF_REG_1,
+				    offsetof(struct __sk_buff, data)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_3, BPF_REG_1,
+				    offsetof(struct __sk_buff, data_end)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_4, BPF_REG_1,
+				    offsetof(struct __sk_buff, len)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, pkt_type)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, mark)),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_6,
+				    offsetof(struct __sk_buff, mark)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_1,
+				    offsetof(struct __sk_buff, queue_mapping)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_8, BPF_REG_1,
+				    offsetof(struct __sk_buff, protocol)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_9, BPF_REG_1,
+				    offsetof(struct __sk_buff, vlan_present)),
+			BPF_MOV64_REG(BPF_REG_0, BPF_REG_2),
+			BPF_ALU64_IMM(BPF_ADD, BPF_REG_0, 8),
+			BPF_JMP_REG(BPF_JGT, BPF_REG_0, BPF_REG_3, 1),
+			BPF_LDX_MEM(BPF_B, BPF_REG_0, BPF_REG_2, 0),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"direct packet read test#2 for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_4, BPF_REG_1,
+				    offsetof(struct __sk_buff, vlan_tci)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, vlan_proto)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, priority)),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_6,
+				    offsetof(struct __sk_buff, priority)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_1,
+				    offsetof(struct __sk_buff,
+					     ingress_ifindex)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_8, BPF_REG_1,
+				    offsetof(struct __sk_buff, tc_index)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_9, BPF_REG_1,
+				    offsetof(struct __sk_buff, hash)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"direct packet read test#3 for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_4, BPF_REG_1,
+				    offsetof(struct __sk_buff, cb[0])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, cb[1])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, cb[2])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_1,
+				    offsetof(struct __sk_buff, cb[3])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_8, BPF_REG_1,
+				    offsetof(struct __sk_buff, cb[4])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_9, BPF_REG_1,
+				    offsetof(struct __sk_buff, napi_id)),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_4,
+				    offsetof(struct __sk_buff, cb[0])),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_5,
+				    offsetof(struct __sk_buff, cb[1])),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_6,
+				    offsetof(struct __sk_buff, cb[2])),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_7,
+				    offsetof(struct __sk_buff, cb[3])),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_8,
+				    offsetof(struct __sk_buff, cb[4])),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"direct packet read test#4 for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_2, BPF_REG_1,
+				    offsetof(struct __sk_buff, family)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_3, BPF_REG_1,
+				    offsetof(struct __sk_buff, remote_ip4)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_4, BPF_REG_1,
+				    offsetof(struct __sk_buff, local_ip4)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, remote_ip6[0])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, remote_ip6[1])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, remote_ip6[2])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_5, BPF_REG_1,
+				    offsetof(struct __sk_buff, remote_ip6[3])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, local_ip6[0])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, local_ip6[1])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, local_ip6[2])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_6, BPF_REG_1,
+				    offsetof(struct __sk_buff, local_ip6[3])),
+			BPF_LDX_MEM(BPF_W, BPF_REG_7, BPF_REG_1,
+				    offsetof(struct __sk_buff, remote_port)),
+			BPF_LDX_MEM(BPF_W, BPF_REG_8, BPF_REG_1,
+				    offsetof(struct __sk_buff, local_port)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid access of tc_classid for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, tc_classid)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = REJECT,
+		.errstr = "invalid bpf_context access",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid access of data_meta for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, data_meta)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = REJECT,
+		.errstr = "invalid bpf_context access",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid access of flow_keys for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, flow_keys)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = REJECT,
+		.errstr = "invalid bpf_context access",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid write access to napi_id for CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_9, BPF_REG_1,
+				    offsetof(struct __sk_buff, napi_id)),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_9,
+				    offsetof(struct __sk_buff, napi_id)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = REJECT,
+		.errstr = "invalid bpf_context access",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
 		"valid cgroup storage access",
 		.insns = {
 			BPF_MOV64_IMM(BPF_REG_2, 0),
@@ -4781,7 +4957,7 @@ static struct bpf_test tests[] = {
 		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
 	},
 	{
-		"invalid per-cgroup storage access 3",
+		"invalid cgroup storage access 3",
 		.insns = {
 			BPF_MOV64_IMM(BPF_REG_2, 0),
 			BPF_LD_MAP_FD(BPF_REG_1, 0),
@@ -4851,6 +5027,182 @@ static struct bpf_test tests[] = {
 		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
 	},
 	{
+		"valid per-cpu cgroup storage access",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_2, 0),
+			BPF_LD_MAP_FD(BPF_REG_1, 0),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_0, 0),
+			BPF_MOV64_REG(BPF_REG_0, BPF_REG_1),
+			BPF_ALU64_IMM(BPF_AND, BPF_REG_0, 1),
+			BPF_EXIT_INSN(),
+		},
+		.fixup_percpu_cgroup_storage = { 1 },
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid per-cpu cgroup storage access 1",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_2, 0),
+			BPF_LD_MAP_FD(BPF_REG_1, 0),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_0, 0),
+			BPF_MOV64_REG(BPF_REG_0, BPF_REG_1),
+			BPF_ALU64_IMM(BPF_AND, BPF_REG_0, 1),
+			BPF_EXIT_INSN(),
+		},
+		.fixup_map1 = { 1 },
+		.result = REJECT,
+		.errstr = "cannot pass map_type 1 into func bpf_get_local_storage",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid per-cpu cgroup storage access 2",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_2, 0),
+			BPF_LD_MAP_FD(BPF_REG_1, 1),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_ALU64_IMM(BPF_AND, BPF_REG_0, 1),
+			BPF_EXIT_INSN(),
+		},
+		.result = REJECT,
+		.errstr = "fd 1 is not pointing to valid bpf_map",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid per-cpu cgroup storage access 3",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_2, 0),
+			BPF_LD_MAP_FD(BPF_REG_1, 0),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_0, 256),
+			BPF_ALU64_IMM(BPF_ADD, BPF_REG_1, 1),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.fixup_percpu_cgroup_storage = { 1 },
+		.result = REJECT,
+		.errstr = "invalid access to map value, value_size=64 off=256 size=4",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid per-cpu cgroup storage access 4",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_2, 0),
+			BPF_LD_MAP_FD(BPF_REG_1, 0),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_0, -2),
+			BPF_MOV64_REG(BPF_REG_0, BPF_REG_1),
+			BPF_ALU64_IMM(BPF_ADD, BPF_REG_1, 1),
+			BPF_EXIT_INSN(),
+		},
+		.fixup_cgroup_storage = { 1 },
+		.result = REJECT,
+		.errstr = "invalid access to map value, value_size=64 off=-2 size=4",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid per-cpu cgroup storage access 5",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_2, 7),
+			BPF_LD_MAP_FD(BPF_REG_1, 0),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_0, 0),
+			BPF_MOV64_REG(BPF_REG_0, BPF_REG_1),
+			BPF_ALU64_IMM(BPF_AND, BPF_REG_0, 1),
+			BPF_EXIT_INSN(),
+		},
+		.fixup_percpu_cgroup_storage = { 1 },
+		.result = REJECT,
+		.errstr = "get_local_storage() doesn't support non-zero flags",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"invalid per-cpu cgroup storage access 6",
+		.insns = {
+			BPF_MOV64_REG(BPF_REG_2, BPF_REG_1),
+			BPF_LD_MAP_FD(BPF_REG_1, 0),
+			BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0,
+				     BPF_FUNC_get_local_storage),
+			BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_0, 0),
+			BPF_MOV64_REG(BPF_REG_0, BPF_REG_1),
+			BPF_ALU64_IMM(BPF_AND, BPF_REG_0, 1),
+			BPF_EXIT_INSN(),
+		},
+		.fixup_percpu_cgroup_storage = { 1 },
+		.result = REJECT,
+		.errstr = "get_local_storage() doesn't support non-zero flags",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"write tstamp from CGROUP_SKB",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_STX_MEM(BPF_DW, BPF_REG_1, BPF_REG_0,
+				    offsetof(struct __sk_buff, tstamp)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.result_unpriv = REJECT,
+		.errstr_unpriv = "invalid bpf_context access off=152 size=8",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"read tstamp from CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_DW, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, tstamp)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"read gso_segs from CGROUP_SKB",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, gso_segs)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"write gso_segs from CGROUP_SKB",
+		.insns = {
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_0,
+				    offsetof(struct __sk_buff, gso_segs)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = REJECT,
+		.result_unpriv = REJECT,
+		.errstr = "invalid bpf_context access off=164 size=4",
+		.prog_type = BPF_PROG_TYPE_CGROUP_SKB,
+	},
+	{
+		"read gso_segs from CLS",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, gso_segs)),
+			BPF_MOV64_IMM(BPF_REG_0, 0),
+			BPF_EXIT_INSN(),
+		},
+		.result = ACCEPT,
+		.prog_type = BPF_PROG_TYPE_SCHED_CLS,
+	},
+	{
 		"multiple registers share map_lookup_elem result",
 		.insns = {
 			BPF_MOV64_IMM(BPF_REG_1, 10),
@@ -4887,7 +5239,7 @@ static struct bpf_test tests[] = {
 			BPF_EXIT_INSN(),
 		},
 		.fixup_map1 = { 4 },
-		.errstr = "R4 pointer arithmetic on PTR_TO_MAP_VALUE_OR_NULL",
+		.errstr = "R4 pointer arithmetic on map_value_or_null",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_SCHED_CLS
 	},
@@ -4908,7 +5260,7 @@ static struct bpf_test tests[] = {
 			BPF_EXIT_INSN(),
 		},
 		.fixup_map1 = { 4 },
-		.errstr = "R4 pointer arithmetic on PTR_TO_MAP_VALUE_OR_NULL",
+		.errstr = "R4 pointer arithmetic on map_value_or_null",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_SCHED_CLS
 	},
@@ -4929,7 +5281,7 @@ static struct bpf_test tests[] = {
 			BPF_EXIT_INSN(),
 		},
 		.fixup_map1 = { 4 },
-		.errstr = "R4 pointer arithmetic on PTR_TO_MAP_VALUE_OR_NULL",
+		.errstr = "R4 pointer arithmetic on map_value_or_null",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_SCHED_CLS
 	},
@@ -5257,7 +5609,7 @@ static struct bpf_test tests[] = {
 		.errstr_unpriv = "R2 leaks addr into mem",
 		.result_unpriv = REJECT,
 		.result = REJECT,
-		.errstr = "BPF_XADD stores into R1 context is not allowed",
+		.errstr = "BPF_XADD stores into R1 ctx is not allowed",
 	},
 	{
 		"leak pointer into ctx 2",
@@ -5272,7 +5624,7 @@ static struct bpf_test tests[] = {
 		.errstr_unpriv = "R10 leaks addr into mem",
 		.result_unpriv = REJECT,
 		.result = REJECT,
-		.errstr = "BPF_XADD stores into R1 context is not allowed",
+		.errstr = "BPF_XADD stores into R1 ctx is not allowed",
 	},
 	{
 		"leak pointer into ctx 3",
@@ -7249,7 +7601,7 @@ static struct bpf_test tests[] = {
 			BPF_EXIT_INSN(),
 		},
 		.fixup_map_in_map = { 3 },
-		.errstr = "R1 pointer arithmetic on CONST_PTR_TO_MAP prohibited",
+		.errstr = "R1 pointer arithmetic on map_ptr prohibited",
 		.result = REJECT,
 	},
 	{
@@ -9002,7 +9354,7 @@ static struct bpf_test tests[] = {
 			BPF_MOV64_IMM(BPF_REG_0, 0),
 			BPF_EXIT_INSN(),
 		},
-		.errstr = "R3 pointer arithmetic on PTR_TO_PACKET_END",
+		.errstr = "R3 pointer arithmetic on pkt_end",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_XDP,
 	},
@@ -9021,7 +9373,7 @@ static struct bpf_test tests[] = {
 			BPF_MOV64_IMM(BPF_REG_0, 0),
 			BPF_EXIT_INSN(),
 		},
-		.errstr = "R3 pointer arithmetic on PTR_TO_PACKET_END",
+		.errstr = "R3 pointer arithmetic on pkt_end",
 		.result = REJECT,
 		.prog_type = BPF_PROG_TYPE_XDP,
 	},
@@ -12359,7 +12711,7 @@ static struct bpf_test tests[] = {
 			BPF_EXIT_INSN(),
 		},
 		.result = REJECT,
-		.errstr = "BPF_XADD stores into R2 packet",
+		.errstr = "BPF_XADD stores into R2 pkt is not allowed",
 		.prog_type = BPF_PROG_TYPE_XDP,
 		.flags = F_NEEDS_EFFICIENT_UNALIGNED_ACCESS,
 	},
@@ -12776,6 +13128,38 @@ static struct bpf_test tests[] = {
 		.result_unpriv = REJECT,
 		.result = ACCEPT,
 	},
+	{
+		"check wire_len is not readable by sockets",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, wire_len)),
+			BPF_EXIT_INSN(),
+		},
+		.errstr = "invalid bpf_context access",
+		.result = REJECT,
+	},
+	{
+		"check wire_len is readable by tc classifier",
+		.insns = {
+			BPF_LDX_MEM(BPF_W, BPF_REG_0, BPF_REG_1,
+				    offsetof(struct __sk_buff, wire_len)),
+			BPF_EXIT_INSN(),
+		},
+		.prog_type = BPF_PROG_TYPE_SCHED_CLS,
+		.result = ACCEPT,
+	},
+	{
+		"check wire_len is not writable by tc classifier",
+		.insns = {
+			BPF_STX_MEM(BPF_W, BPF_REG_1, BPF_REG_1,
+				    offsetof(struct __sk_buff, wire_len)),
+			BPF_EXIT_INSN(),
+		},
+		.prog_type = BPF_PROG_TYPE_SCHED_CLS,
+		.errstr = "invalid bpf_context access",
+		.errstr_unpriv = "R1 leaks addr",
+		.result = REJECT,
+	},
 };
 
 static int probe_filter_length(const struct bpf_insn *fp)
@@ -12881,15 +13265,17 @@ static int create_map_in_map(void)
 	return outer_map_fd;
 }
 
-static int create_cgroup_storage(void)
+static int create_cgroup_storage(bool percpu)
 {
+	enum bpf_map_type type = percpu ? BPF_MAP_TYPE_PERCPU_CGROUP_STORAGE :
+		BPF_MAP_TYPE_CGROUP_STORAGE;
 	int fd;
 
-	fd = bpf_create_map(BPF_MAP_TYPE_CGROUP_STORAGE,
-			    sizeof(struct bpf_cgroup_storage_key),
+	fd = bpf_create_map(type, sizeof(struct bpf_cgroup_storage_key),
 			    TEST_DATA_LEN, 0, 0);
 	if (fd < 0)
-		printf("Failed to create array '%s'!\n", strerror(errno));
+		printf("Failed to create cgroup storage '%s'!\n",
+		       strerror(errno));
 
 	return fd;
 }
@@ -12907,6 +13293,7 @@ static void do_test_fixup(struct bpf_test *test, enum bpf_map_type prog_type,
 	int *fixup_prog2 = test->fixup_prog2;
 	int *fixup_map_in_map = test->fixup_map_in_map;
 	int *fixup_cgroup_storage = test->fixup_cgroup_storage;
+	int *fixup_percpu_cgroup_storage = test->fixup_percpu_cgroup_storage;
 
 	if (test->fill_helper)
 		test->fill_helper(test);
@@ -12976,11 +13363,19 @@ static void do_test_fixup(struct bpf_test *test, enum bpf_map_type prog_type,
 	}
 
 	if (*fixup_cgroup_storage) {
-		map_fds[7] = create_cgroup_storage();
+		map_fds[7] = create_cgroup_storage(false);
 		do {
 			prog[*fixup_cgroup_storage].imm = map_fds[7];
 			fixup_cgroup_storage++;
 		} while (*fixup_cgroup_storage);
+	}
+
+	if (*fixup_percpu_cgroup_storage) {
+		map_fds[8] = create_cgroup_storage(true);
+		do {
+			prog[*fixup_percpu_cgroup_storage].imm = map_fds[8];
+			fixup_percpu_cgroup_storage++;
+		} while (*fixup_percpu_cgroup_storage);
 	}
 }
 

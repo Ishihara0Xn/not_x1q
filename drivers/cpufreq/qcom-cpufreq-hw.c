@@ -374,9 +374,8 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 
 		cur_freq = c->table[i].frequency;
 
-		/*dev_info(dev, "STOCK cpu=%lu, index=%d, freq=%d, src=%d, lval=%d, volt=%d\n",
-		    	cpu, i, c->table[i].frequency,
-		    	src, lval, volt);*/
+		dev_info(dev, "cpu=%lu, index=%d, freq=%d, volt=%d\n",
+		    	cpu, i, c->table[i].frequency, volt);
 
 				if (!of_find_freq(of_table, of_len, c->table[i].frequency)) {
 			c->table[i].frequency = CPUFREQ_ENTRY_INVALID;
@@ -425,9 +424,13 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 				continue;
 			dev_pm_opp_add(cpu_dev, c->table[i].frequency * 1000,
 							volt);
-			dev_info(dev, "cpu=%lu, index=%d, freq=%d, src=%d, lval=%d, volt=%d\n",
-		    	cpu, i, c->table[i].frequency,
-		    	src, lval, volt);
+							
+			if (cpu == 0) {
+			dev_pm_opp_add(cpu_dev, 1912000000, 812500);
+                        } 
+                        
+                        dev_info(dev, "==== Freq-voltage LUT reading done. ====\n");
+
 		}
 	}
 

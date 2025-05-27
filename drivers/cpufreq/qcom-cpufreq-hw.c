@@ -424,12 +424,6 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 				continue;
 			dev_pm_opp_add(cpu_dev, c->table[i].frequency * 1000,
 							volt);
-							
-			if (cpu == 0) {
-			dev_pm_opp_add(cpu_dev, 1912000000, 812500);
-                        } 
-                        
-                        dev_info(dev, "==== Freq-voltage LUT reading done. ====\n");
 
 		}
 	}

@@ -8,14 +8,14 @@
 	gpu_opp_table_v2: gpu-opp-table_v2 {
 		compatible = "operating-points-v2";
 
-		opp-840000000 {
-			opp-hz = /bits/ 64 <840000000>;
-			opp-microvolt = <270>;
+		opp-896000000 {
+			opp-hz = /bits/ 64 <896000000>;
+			opp-microvolt = <384>;
 		};
 
-		opp-682978000 {
-			opp-hz = /bits/ 64 <682978000>;
-                       opp-microvolt = <239>;
+		opp-840000000 {
+			opp-hz = /bits/ 64 <840000000>;
+                       opp-microvolt = <270>;
 		};
 
 		opp-635000000 {
@@ -64,15 +64,15 @@
 
                         qcom,gpu-pwrlevel@0 {
                                 reg = <0>;
-                                qcom,gpu-freq = <840000000>;
+                                qcom,gpu-freq = <896000000>;
                                 
-                                qcom,bus-freq-ddr7 = <12>;
+                                qcom,bus-freq-ddr7 = <11>;
 				qcom,bus-min-ddr7 = <1>;
-				qcom,bus-max-ddr7 = <12>;
+				qcom,bus-max-ddr7 = <11>;
 				
-                                qcom,bus-freq-ddr8 = <12>;
+                                qcom,bus-freq-ddr8 = <11>;
 				qcom,bus-min-ddr8 = <1>;
-				qcom,bus-max-ddr8 = <12>;
+				qcom,bus-max-ddr8 = <11>;
 				
                                 qcom,acd-level = <0x88287ffd>;
                                 qcom,cx-level = <352>;
@@ -80,15 +80,15 @@
 
                         qcom,gpu-pwrlevel@1 {
                                 reg = <1>;
-                                qcom,gpu-freq = <682978000>;
+                                qcom,gpu-freq = <840000000>;
                                 
-                                qcom,bus-freq-ddr7 = <12>;
+                                qcom,bus-freq-ddr7 = <11>;
                                 qcom,bus-min-ddr7 = <1>;
-                                qcom,bus-max-ddr7 = <12>;
+                                qcom,bus-max-ddr7 = <11>;
                                 
-                                qcom,bus-freq-ddr8 = <12>;
+                                qcom,bus-freq-ddr8 = <11>;
                                 qcom,bus-min-ddr8 = <1>;
-                                qcom,bus-max-ddr8 = <12>;
+                                qcom,bus-max-ddr8 = <11>;
                                 
                                 qcom,acd-level = <0xaa5e9ffd>;
                                 qcom,cx-level = <320>;
@@ -100,7 +100,7 @@
                                 
                                 qcom,bus-freq-ddr7 = <11>;
                                 qcom,bus-min-ddr7 = <1>;
-                                qcom,bus-max-ddr7 = <12>;
+                                qcom,bus-max-ddr7 = <11>;
                                 
                                 qcom,bus-freq-ddr8 = <11>;
                                 qcom,bus-min-ddr8 = <1>;
@@ -116,7 +116,7 @@
                                 
                                 qcom,bus-freq-ddr7 = <11>;
                                 qcom,bus-min-ddr7 = <1>;
-                                qcom,bus-max-ddr7 = <12>;
+                                qcom,bus-max-ddr7 = <11>;
                                 
                                 qcom,bus-freq-ddr8 = <11>;
                                 qcom,bus-min-ddr8 = <1>;

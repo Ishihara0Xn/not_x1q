@@ -10,9 +10,9 @@ do.modules=0
 do.systemless=1
 do.cleanup=1
 do.cleanuponabort=0
-device.name1=r8q
-device.name2=r8qxx
-device.name3=r8qxxx
+device.name1=x1q
+device.name2=y2q
+device.name3=x1qxx
 supported.versions=11 - 15
 supported.patchlevels=
 '; } # end properties
